@@ -1,0 +1,83 @@
+import java.util.ArrayList;
+import java.util.List;
+
+public class PliLexer {
+    private String input;
+    private int pos;
+    private int length;
+
+    public PliLexer(String input) {
+        this.input = input;
+        this.pos = 0;
+        this.length = input.length();
+    }
+
+    public List<String> tokenize() {
+        List<String> tokens = new ArrayList<>();
+
+        while (pos < length) {
+            skipWhitespace();
+            char currentChar = input.charAt(pos);
+
+            if (currentChar == '\'') {
+                tokens.add(extractString());
+            } else {
+                tokens.add(nextToken());
+            }
+        }
+        return tokens;
+    }
+
+    private void skipWhitespace() {
+        while (pos < length && Character.isWhitespace(input.charAt(pos))) {
+            pos++;
+        }
+    }
+
+    private String extractString() {
+        StringBuilder str = new StringBuilder();
+        pos++; // Skip the opening single quote
+
+        while (pos < length) {
+            char currentChar = input.charAt(pos);
+
+            if (currentChar == '\'') {
+                if (pos + 1 < length && input.charAt(pos + 1) == '\'') {
+                    // Handle escaped single quote by adding a single quote
+                    str.append('\'');
+                    pos += 2; // Skip both single quotes
+                } else {
+                    // End of string
+                    pos++; // Skip the closing single quote
+                    break;
+                }
+            } else {
+                str.append(currentChar);
+                pos++;
+            }
+        }
+
+        return str.toString();
+    }
+
+    private String nextToken() {
+        StringBuilder token = new StringBuilder();
+
+        while (pos < length && !Character.isWhitespace(input.charAt(pos)) && input.charAt(pos) != '\'') {
+            token.append(input.charAt(pos));
+            pos++;
+        }
+
+        return token.toString();
+    }
+
+    public static void main(String[] args) {
+        String input = "DCL var1 CHAR(10); var2 = 'Hello World'; var3 = 'It''s OK';";
+        PliLexer lexer = new PliLexer(input);
+        List<String> tokens = lexer.tokenize();
+
+        for (String token : tokens) {
+            System.out.println(token);
+        }
+    }
+}
