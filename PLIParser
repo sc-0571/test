@@ -1,0 +1,185 @@
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+public class PLIParser {
+
+    // Token types
+    enum TokenType {
+        PROC, DECLARE, END, IDENTIFIER, SEMICOLON, UNKNOWN
+    }
+
+    // Token class
+    static class Token {
+        TokenType type;
+        String value;
+
+        Token(TokenType type, String value) {
+            this.type = type;
+            this.value = value;
+        }
+    }
+
+    // Token patterns
+    static Pattern[] tokenPatterns = new Pattern[] {
+            Pattern.compile("\\bPROC\\b"),
+            Pattern.compile("\\bDECLARE\\b"),
+            Pattern.compile("\\bEND\\b"),
+            Pattern.compile("[A-Za-z_][A-Za-z0-9_]*"),
+            Pattern.compile(";")
+    };
+
+    // Tokenizer function
+    static List<Token> tokenize(String text) {
+        List<Token> tokens = new ArrayList<>();
+        int pos = 0;
+
+        while (pos < text.length()) {
+            boolean match = false;
+
+            for (int i = 0; i < tokenPatterns.length; i++) {
+                Matcher matcher = tokenPatterns[i].matcher(text.substring(pos));
+
+                if (matcher.lookingAt()) {
+                    TokenType type;
+
+                    switch (i) {
+                        case 0: type = TokenType.PROC; break;
+                        case 1: type = TokenType.DECLARE; break;
+                        case 2: type = TokenType.END; break;
+                        case 3: type = TokenType.IDENTIFIER; break;
+                        case 4: type = TokenType.SEMICOLON; break;
+                        default: type = TokenType.UNKNOWN; break;
+                    }
+
+                    tokens.add(new Token(type, matcher.group(0)));
+                    pos += matcher.end();
+                    match = true;
+                    break;
+                }
+            }
+
+            if (!match) {
+                tokens.add(new Token(TokenType.UNKNOWN, String.valueOf(text.charAt(pos))));
+                pos++;
+            }
+        }
+
+        return tokens;
+    }
+
+    // Parser function
+    static Map<String, List<String>> parse(List<Token> tokens) {
+        Map<String, List<String>> procs = new HashMap<>();
+        int pos = 0;
+
+        while (pos < tokens.size()) {
+            if (tokens.get(pos).type == TokenType.PROC) {
+                pos++;
+                ProcResult result = parseProc(tokens, pos);
+                if (result.procName != null) {
+                    procs.put(result.procName, result.declareVars);
+                }
+                pos = result.pos;
+            } else {
+                pos++;
+            }
+        }
+
+        return procs;
+    }
+
+    // Parse PROC block
+    static ProcResult parseProc(List<Token> tokens, int pos) {
+        String procName = null;
+        List<String> declareVars = new ArrayList<>();
+
+        if (tokens.get(pos).type == TokenType.IDENTIFIER) {
+            procName = tokens.get(pos).value;
+            pos++;
+        } else {
+            throw new RuntimeException("Expected identifier after PROC");
+        }
+
+        while (pos < tokens.size() && tokens.get(pos).type != TokenType.END) {
+            if (tokens.get(pos).type == TokenType.DECLARE) {
+                pos++;
+                DeclareResult declareResult = parseDeclare(tokens, pos);
+                declareVars.addAll(declareResult.variables);
+                pos = declareResult.pos;
+            } else {
+                pos++;
+            }
+        }
+
+        if (pos < tokens.size() && tokens.get(pos).type == TokenType.END) {
+            pos++; // Skip the END token
+        }
+
+        return new ProcResult(procName, declareVars, pos);
+    }
+
+    // Parse DECLARE variables
+    static DeclareResult parseDeclare(List<Token> tokens, int pos) {
+        List<String> variables = new ArrayList<>();
+
+        while (pos < tokens.size() && tokens.get(pos).type == TokenType.IDENTIFIER) {
+            variables.add(tokens.get(pos).value);
+            pos++;
+
+            if (tokens.get(pos).type == TokenType.SEMICOLON) {
+                pos++; // Skip the semicolon
+                break;
+            }
+        }
+
+        return new DeclareResult(variables, pos);
+    }
+
+    // Main method to test the parser
+    public static void main(String[] args) {
+        String pliCode = """
+                main: PROC;
+                  DECLARE x INT, y FLOAT;
+                  DECLARE z CHAR(10);
+                END main;
+
+                subroutine: PROC;
+                  DECLARE a INT;
+                END subroutine;
+                """;
+
+        List<Token> tokens = tokenize(pliCode);
+        Map<String, List<String>> procs = parse(tokens);
+
+        for (Map.Entry<String, List<String>> entry : procs.entrySet()) {
+            System.out.println("PROC " + entry.getKey() + ": DECLARE " + String.join(", ", entry.getValue()));
+        }
+    }
+
+    // Helper classes to store parsing results
+    static class ProcResult {
+        String procName;
+        List<String> declareVars;
+        int pos;
+
+        ProcResult(String procName, List<String> declareVars, int pos) {
+            this.procName = procName;
+            this.declareVars = declareVars;
+            this.pos = pos;
+        }
+    }
+
+    static class DeclareResult {
+        List<String> variables;
+        int pos;
+
+        DeclareResult(List<String> variables, int pos) {
+            this.variables = variables;
+            this.pos = pos;
+        }
+    }
+}
