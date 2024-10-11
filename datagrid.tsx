@@ -1,17 +1,16 @@
 import * as React from 'react';
-import { DataGrid } from '@mui/x-data-grid';
 import { makeStyles } from '@mui/styles';
 
 const useStyles = makeStyles({
   greenRow: {
-    backgroundColor: 'lightgreen',
+    color: 'green', // 字体颜色改为绿色
   },
   redRow: {
-    backgroundColor: 'lightcoral',
+    color: 'red', // 字体颜色改为红色
   },
 });
 
-const ReadOnlyGrid = () => {
+const ReadOnlyTable = () => {
   const classes = useStyles();
 
   const rows = [
@@ -21,24 +20,27 @@ const ReadOnlyGrid = () => {
     { id: 4, col1: 'Baz', col2: 'Qux', status: 'red' },
   ];
 
-  const columns = [
-    { field: 'col1', headerName: 'Column 1', width: 150 },
-    { field: 'col2', headerName: 'Column 2', width: 150 },
-  ];
-
   return (
-    <div style={{ height: 300, width: '100%' }}>
-      <DataGrid
-        rows={rows}
-        columns={columns}
-        pageSize={5}
-        disableSelectionOnClick
-        getRowClassName={(params) =>
-          params.row.status === 'green' ? classes.greenRow : classes.redRow
-        }
-      />
-    </div>
+    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+      <thead>
+        <tr>
+          <th style={{ border: '1px solid black', padding: '8px' }}>Column 1</th>
+          <th style={{ border: '1px solid black', padding: '8px' }}>Column 2</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((row) => (
+          <tr
+            key={row.id}
+            className={row.status === 'green' ? classes.greenRow : classes.redRow}
+          >
+            <td style={{ border: '1px solid black', padding: '8px' }}>{row.col1}</td>
+            <td style={{ border: '1px solid black', padding: '8px' }}>{row.col2}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 };
 
-export default ReadOnlyGrid;
+export default ReadOnlyTable;
